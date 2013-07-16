@@ -60,6 +60,7 @@ func (b *Builder) Prepare(raws ...interface{}) error {
 
 	// Accumulate any errors
 	errs := make([]error, 0)
+	errs = append(errs, b.config.AccessConfig.Prepare()...)
 	errs = append(errs, b.config.RunConfig.Prepare()...)
 
 	// Unused keys are errors
