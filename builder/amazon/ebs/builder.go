@@ -12,6 +12,7 @@ import (
 	"github.com/mitchellh/goamz/ec2"
 	"github.com/mitchellh/mapstructure"
 	"github.com/mitchellh/multistep"
+	awscommon "github.com/mitchellh/packer/builder/amazon/common"
 	"github.com/mitchellh/packer/builder/common"
 	"github.com/mitchellh/packer/packer"
 	"log"
@@ -25,9 +26,7 @@ import (
 const BuilderId = "mitchellh.amazonebs"
 
 type config struct {
-	// Access information
-	AccessKey string `mapstructure:"access_key"`
-	SecretKey string `mapstructure:"secret_key"`
+	awscommon.AccessConfig `mapstructure:",squash"`
 
 	// Information for the source instance
 	Region          string
@@ -140,7 +139,7 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 		panic("region not found")
 	}
 
-	auth, err := aws.GetAuth(b.config.AccessKey, b.config.SecretKey)
+	auth, err := b.config.AccessConfig.Auth()
 	if err != nil {
 		return nil, err
 	}
