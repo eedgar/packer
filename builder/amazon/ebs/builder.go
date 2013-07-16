@@ -19,7 +19,6 @@ import (
 	"sort"
 	"strings"
 	"text/template"
-	"time"
 )
 
 // The unique ID for this builder
@@ -27,23 +26,12 @@ const BuilderId = "mitchellh.amazonebs"
 
 type config struct {
 	awscommon.AccessConfig `mapstructure:",squash"`
-
-	// Information for the source instance
-	Region          string
-	SourceAmi       string `mapstructure:"source_ami"`
-	InstanceType    string `mapstructure:"instance_type"`
-	SSHUsername     string `mapstructure:"ssh_username"`
-	SSHPort         int    `mapstructure:"ssh_port"`
-	SecurityGroupId string `mapstructure:"security_group_id"`
+	awscommon.RunConfig    `mapstructure:",squash"`
 
 	// Configuration of the resulting AMI
 	AMIName string `mapstructure:"ami_name"`
 
-	PackerDebug   bool   `mapstructure:"packer_debug"`
-	RawSSHTimeout string `mapstructure:"ssh_timeout"`
-
-	// Unexported fields that are calculated from others
-	sshTimeout time.Duration
+	PackerDebug bool `mapstructure:"packer_debug"`
 }
 
 type Builder struct {
@@ -72,6 +60,7 @@ func (b *Builder) Prepare(raws ...interface{}) error {
 
 	// Accumulate any errors
 	errs := make([]error, 0)
+	errs = append(errs, b.config.RunConfig.Prepare()...)
 
 	// Unused keys are errors
 	if len(md.Unused) > 0 {
@@ -84,38 +73,7 @@ func (b *Builder) Prepare(raws ...interface{}) error {
 		}
 	}
 
-	if b.config.SSHPort == 0 {
-		b.config.SSHPort = 22
-	}
-
-	if b.config.RawSSHTimeout == "" {
-		b.config.RawSSHTimeout = "1m"
-	}
-
 	// Accumulate any errors
-	if b.config.SourceAmi == "" {
-		errs = append(errs, errors.New("A source_ami must be specified"))
-	}
-
-	if b.config.InstanceType == "" {
-		errs = append(errs, errors.New("An instance_type must be specified"))
-	}
-
-	if b.config.Region == "" {
-		errs = append(errs, errors.New("A region must be specified"))
-	} else if _, ok := aws.Regions[b.config.Region]; !ok {
-		errs = append(errs, fmt.Errorf("Unknown region: %s", b.config.Region))
-	}
-
-	if b.config.SSHUsername == "" {
-		errs = append(errs, errors.New("An ssh_username must be specified"))
-	}
-
-	b.config.sshTimeout, err = time.ParseDuration(b.config.RawSSHTimeout)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("Failed parsing ssh_timeout: %s", err))
-	}
-
 	if b.config.AMIName == "" {
 		errs = append(errs, errors.New("ami_name must be specified"))
 	} else {
@@ -161,7 +119,7 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 		&common.StepConnectSSH{
 			SSHAddress:     sshAddress,
 			SSHConfig:      sshConfig,
-			SSHWaitTimeout: b.config.sshTimeout,
+			SSHWaitTimeout: b.config.SSHTimeout(),
 		},
 		&stepProvision{},
 		&stepStopInstance{},
