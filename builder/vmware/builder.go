@@ -27,6 +27,8 @@ type Builder struct {
 }
 
 type config struct {
+	common.PackerConfig `mapstructure:",squash"`
+
 	DiskName          string            `mapstructure:"vmdk_name"`
 	DiskSize          uint              `mapstructure:"disk_size"`
 	FloppyFiles       []string          `mapstructure:"floppy_files"`
@@ -51,10 +53,6 @@ type config struct {
 	VMXData           map[string]string `mapstructure:"vmx_data"`
 	VNCPortMin        uint              `mapstructure:"vnc_port_min"`
 	VNCPortMax        uint              `mapstructure:"vnc_port_max"`
-
-	PackerBuildName string `mapstructure:"packer_build_name"`
-	PackerDebug     bool   `mapstructure:"packer_debug"`
-	PackerForce     bool   `mapstructure:"packer_force"`
 
 	RawBootWait        string `mapstructure:"boot_wait"`
 	RawShutdownTimeout string `mapstructure:"shutdown_timeout"`
